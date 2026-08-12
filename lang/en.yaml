@@ -1,0 +1,110 @@
+# ============================================================================
+# Renac hybrid inverter — English entity names
+# ============================================================================
+#
+# Include THIS file, not renac-core.yaml:
+#
+#     packages:
+#       renac: !include lang/en.yaml
+#
+# To add a language: copy this file, translate the values on the right,
+# leave the keys and the packages block untouched. Nothing else changes.
+#
+# ============================================================================
+
+substitutions:
+
+  # --- PV input ---
+  e_pv1_voltage: "PV1 voltage"
+  e_pv1_current: "PV1 current"
+  e_pv1_power: "PV1 power"
+  e_pv2_voltage: "PV2 voltage"
+  e_pv2_current: "PV2 current"
+  e_pv2_power: "PV2 power"
+
+  # --- Temperatures ---
+  e_internal_temperature: "internal temperature"
+  e_charger_temperature: "charger temperature"
+  e_boost_temperature: "boost temperature"
+  e_inverter_temperature: "inverter temperature"
+
+  # --- Battery / BMS ---
+  e_battery_voltage: "battery voltage"
+  e_battery_current: "battery current"
+  e_battery_power: "battery power"
+  e_bms_voltage: "BMS voltage"
+  e_bms_current: "BMS current"
+  e_bms_temperature: "BMS temperature"
+  e_battery_soc: "battery SOC"
+  e_battery_soh: "battery SOH"
+  e_battery_cycles: "battery cycles"
+  e_battery_capacity: "battery capacity"
+  e_battery_charge_power: "battery charge power"
+  e_battery_discharge_power: "battery discharge power"
+  e_battery_status: "battery status"
+  e_bms_state: "BMS state"
+
+  # --- Cells and limits ---
+  e_charge_voltage_limit: "charge voltage limit"
+  e_discharge_voltage_limit: "discharge voltage limit"
+  e_charge_current_limit: "charge current limit"
+  e_discharge_current_limit: "discharge current limit"
+  e_cell_voltage_max: "cell voltage max"
+  e_cell_voltage_min: "cell voltage min"
+  e_cell_number_max: "cell number max"
+  e_cell_number_min: "cell number min"
+  e_cell_temperature_max: "cell temperature max"
+  e_cell_temperature_min: "cell temperature min"
+  e_cell_voltage_delta: "cell voltage delta"
+
+  # --- Grid ---
+  e_grid_voltage_r: "grid voltage R"
+  e_grid_voltage_s: "grid voltage S"
+  e_grid_voltage_t: "grid voltage T"
+  e_grid_frequency_r: "grid frequency R"
+  e_grid_frequency_s: "grid frequency S"
+  e_grid_frequency_t: "grid frequency T"
+  e_grid_import_power: "grid import power"
+  e_grid_export_power: "grid export power"
+
+  # --- Inverter ---
+  e_inverter_current_r: "inverter current R"
+  e_inverter_current_s: "inverter current S"
+  e_inverter_current_t: "inverter current T"
+  e_inverter_power_r: "inverter power R"
+  e_inverter_power_s: "inverter power S"
+  e_inverter_power_t: "inverter power T"
+  e_inverter_power_total: "inverter power total"
+  e_inverter_state: "inverter state"
+
+  # --- EPS ---
+  e_eps_voltage_r: "EPS voltage R"
+  e_eps_voltage_s: "EPS voltage S"
+  e_eps_voltage_t: "EPS voltage T"
+  e_eps_current_r: "EPS current R"
+  e_eps_current_s: "EPS current S"
+  e_eps_current_t: "EPS current T"
+  e_eps_power_r: "EPS power R"
+  e_eps_power_s: "EPS power S"
+  e_eps_power_t: "EPS power T"
+  e_eps_frequency: "EPS frequency"
+
+  # --- Meters and load ---
+  e_meter_power_r: "meter power R"
+  e_meter_power_s: "meter power S"
+  e_meter_power_t: "meter power T"
+  e_meter_power_total: "meter power total"
+  e_meter2_power_total: "meter2 power total"
+  e_meter3_power_total: "meter3 power total"
+  e_load_power_r: "load power R"
+  e_load_power_s: "load power S"
+  e_load_power_t: "load power T"
+  e_load_power_total: "load power total"
+  e_meter_state: "meter state"
+
+  # --- Status and diagnostics ---
+  e_conversion_loss: "conversion loss"
+  e_alarm: "alarm"
+
+packages:
+  renac_core: !include ../renac-core.yaml

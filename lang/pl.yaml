@@ -1,0 +1,113 @@
+# ============================================================================
+# Renac hybrid inverter — Polish / polskie entity names
+# ============================================================================
+#
+# Include THIS file, not renac-core.yaml:
+#
+#     packages:
+#       renac: !include lang/pl.yaml
+#
+# To add a language: copy this file, translate the values on the right,
+# leave the keys and the packages block untouched. Nothing else changes.
+#
+# Tłumacz tylko wartości po prawej stronie.
+# Klucze (e_...) i sekcja packages muszą zostać bez zmian.
+#
+# ============================================================================
+
+substitutions:
+
+  # --- PV input ---
+  e_pv1_voltage: "PV1 napięcie"
+  e_pv1_current: "PV1 prąd"
+  e_pv1_power: "PV1 moc"
+  e_pv2_voltage: "PV2 napięcie"
+  e_pv2_current: "PV2 prąd"
+  e_pv2_power: "PV2 moc"
+
+  # --- Temperatures ---
+  e_internal_temperature: "temperatura wewnętrzna"
+  e_charger_temperature: "temperatura ładowarki"
+  e_boost_temperature: "temperatura boost"
+  e_inverter_temperature: "temperatura inwertera"
+
+  # --- Battery / BMS ---
+  e_battery_voltage: "bateria napięcie"
+  e_battery_current: "bateria prąd"
+  e_battery_power: "bateria moc"
+  e_bms_voltage: "BMS napięcie"
+  e_bms_current: "BMS prąd"
+  e_bms_temperature: "BMS temperatura"
+  e_battery_soc: "bateria SOC"
+  e_battery_soh: "bateria SOH"
+  e_battery_cycles: "bateria liczba cykli"
+  e_battery_capacity: "bateria pojemność"
+  e_battery_charge_power: "bateria moc ładowania"
+  e_battery_discharge_power: "bateria moc rozładowania"
+  e_battery_status: "status baterii"
+  e_bms_state: "stan BMS"
+
+  # --- Cells and limits ---
+  e_charge_voltage_limit: "limit napięcia ładowania"
+  e_discharge_voltage_limit: "napięcie odcięcia rozładowania"
+  e_charge_current_limit: "limit prądu ładowania"
+  e_discharge_current_limit: "limit prądu rozładowania"
+  e_cell_voltage_max: "napięcie celi max"
+  e_cell_voltage_min: "napięcie celi min"
+  e_cell_number_max: "numer celi max"
+  e_cell_number_min: "numer celi min"
+  e_cell_temperature_max: "temperatura celi max"
+  e_cell_temperature_min: "temperatura celi min"
+  e_cell_voltage_delta: "rozrzut napięć cel"
+
+  # --- Grid ---
+  e_grid_voltage_r: "sieć napięcie R"
+  e_grid_voltage_s: "sieć napięcie S"
+  e_grid_voltage_t: "sieć napięcie T"
+  e_grid_frequency_r: "sieć częstotliwość R"
+  e_grid_frequency_s: "sieć częstotliwość S"
+  e_grid_frequency_t: "sieć częstotliwość T"
+  e_grid_import_power: "sieć moc poboru"
+  e_grid_export_power: "sieć moc oddawania"
+
+  # --- Inverter ---
+  e_inverter_current_r: "inwerter prąd R"
+  e_inverter_current_s: "inwerter prąd S"
+  e_inverter_current_t: "inwerter prąd T"
+  e_inverter_power_r: "inwerter moc R"
+  e_inverter_power_s: "inwerter moc S"
+  e_inverter_power_t: "inwerter moc T"
+  e_inverter_power_total: "inwerter moc suma"
+  e_inverter_state: "stan inwertera"
+
+  # --- EPS ---
+  e_eps_voltage_r: "EPS napięcie R"
+  e_eps_voltage_s: "EPS napięcie S"
+  e_eps_voltage_t: "EPS napięcie T"
+  e_eps_current_r: "EPS prąd R"
+  e_eps_current_s: "EPS prąd S"
+  e_eps_current_t: "EPS prąd T"
+  e_eps_power_r: "EPS moc R"
+  e_eps_power_s: "EPS moc S"
+  e_eps_power_t: "EPS moc T"
+  e_eps_frequency: "EPS częstotliwość"
+
+  # --- Meters and load ---
+  e_meter_power_r: "licznik moc R"
+  e_meter_power_s: "licznik moc S"
+  e_meter_power_t: "licznik moc T"
+  e_meter_power_total: "licznik moc suma"
+  e_meter2_power_total: "licznik2 moc suma"
+  e_meter3_power_total: "licznik3 moc suma"
+  e_load_power_r: "obciążenie moc R"
+  e_load_power_s: "obciążenie moc S"
+  e_load_power_t: "obciążenie moc T"
+  e_load_power_total: "obciążenie moc suma"
+  e_meter_state: "stan licznika"
+
+  # --- Status and diagnostics ---
+  e_conversion_loss: "straty konwersji"
+  e_alarm: "alarm"
+
+packages:
+  renac_core: !include ../renac-core.yaml

@@ -1,0 +1,994 @@
+# ============================================================================
+# Renac hybrid inverter — ESPHome Modbus RTU package (CORE)
+# ============================================================================
+#
+# Do not include this file directly — include a language file instead:
+#
+#     packages:
+#       renac: !include lang/en.yaml     # or lang/pl.yaml, lang/de.yaml ...
+#
+# The language file supplies the entity-name substitutions and pulls this
+# core in as a package. Register addresses, scaling and logic live here and
+# here only; translations never touch them.
+#
+# Tested on: Renac N3-HV (three-phase hybrid, AC-coupled retrofit)
+# Register map: holding 11000-11143
+#   (base map from github.com/Yety/Renacci, extended and verified 2026-08)
+#
+# HARDWARE
+#   Any ESP8266/ESP32 + RS485 transceiver (MAX485 / MAX3485 / auto-direction).
+#   Inverter COM port: pin 3 = 485_A, pin 4 = 485_B (RJ45).
+#   9600 baud, 8N1. Default slave address 1.
+#   With MAX485 you MUST set flow_control_pin (DE+RE tied together).
+#   Auto-direction modules: remove the flow_control_pin line.
+#
+# SIGN CONVENTIONS (verified against a live system)
+#   inverter AC power  : negative = importing from grid (charging)
+#                        positive = exporting to grid (discharging)
+#   battery power      : positive = charging, negative = discharging
+#   meter power        : positive = importing, negative = exporting
+#
+# NOTES
+#   - All values are 16-bit SIGNED big-endian. U_WORD shows ~65000 instead
+#     of negative numbers.
+#   - PV registers (11000-11005) read zero on AC-coupled retrofits.
+#   - Registers below 11000 and above 11143 return exception 2.
+#   - Registers 11006-11015 and 11061-11075 read zero; omitted here.
+#   - No cumulative energy registers exist. Use a Riemann sum integration
+#     in Home Assistant to get kWh.
+#
+# LICENCE: public domain / CC0
+# ============================================================================
+
+substitutions:
+#       renac_name: "Renac"
+#       renac_address: "1"
+#       renac_update_interval: "15s"
+#       renac_flow_control_pin: "4"
+#       renac_tx_pin: "TX"
+#       renac_rx_pin: "RX"
+#
+#     packages:
+#       renac: !include renac-hybrid.yaml
+#
+# LICENCE: public domain / CC0 — do what you like with it.
+# ============================================================================
+
+substitutions:
+  renac_name: "Renac"
+  renac_address: "1"
+  renac_update_interval: "15s"
+  renac_tx_pin: "TX"
+  renac_rx_pin: "RX"
+  renac_flow_control_pin: "4"
+
+uart:
+  id: uart_renac
+  tx_pin: ${renac_tx_pin}
+  rx_pin: ${renac_rx_pin}
+  baud_rate: 9600
+  data_bits: 8
+  parity: NONE
+  stop_bits: 1
+
+modbus:
+  id: modbus_renac
+  uart_id: uart_renac
+  # Remove the next line if your RS485 module handles direction automatically.
+  flow_control_pin: ${renac_flow_control_pin}
+  send_wait_time: 250ms
+
+modbus_controller:
+  - id: renac
+    address: ${renac_address}
+    modbus_id: modbus_renac
+    update_interval: ${renac_update_interval}
+    command_throttle: 100ms
+
+sensor:
+
+# ---------------------------------------------------------------------------
+# PV input (DC-coupled installs only — reads zero on AC retrofits)
+# ---------------------------------------------------------------------------
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_pv1_voltage}"
+    address: 11000
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_pv1_current}"
+    address: 11001
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "A"
+    device_class: current
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_pv1_power}"
+    address: 11002
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_pv2_voltage}"
+    address: 11003
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_pv2_current}"
+    address: 11004
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "A"
+    device_class: current
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_pv2_power}"
+    address: 11005
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+
+# ---------------------------------------------------------------------------
+# Temperatures (11016-11019)
+# ---------------------------------------------------------------------------
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_internal_temperature}"
+    address: 11016
+    register_type: holding
+    force_new_range: true
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_charger_temperature}"
+    address: 11017
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_boost_temperature}"
+    address: 11018
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_inverter_temperature}"
+    address: 11019
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+# ---------------------------------------------------------------------------
+# Battery and BMS (11020-11027)
+# ---------------------------------------------------------------------------
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_battery_voltage}"
+    address: 11020
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_battery_current}"
+    address: 11021
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "A"
+    device_class: current
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  # positive = charging, negative = discharging
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_battery_power}"
+    id: renac_battery_power
+    address: 11022
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_bms_voltage}"
+    address: 11023
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_bms_current}"
+    address: 11024
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "A"
+    device_class: current
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_bms_temperature}"
+    address: 11025
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_battery_soc}"
+    address: 11026
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "%"
+    device_class: battery
+    state_class: measurement
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_battery_soh}"
+    address: 11027
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "%"
+    state_class: measurement
+    entity_category: diagnostic
+
+# ---------------------------------------------------------------------------
+# Battery limits and cell data (11028-11037)
+# Static configuration values plus live per-cell readings from the BMS.
+# ---------------------------------------------------------------------------
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_charge_voltage_limit}"
+    address: 11028
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_discharge_voltage_limit}"
+    address: 11029
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_charge_current_limit}"
+    address: 11030
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "A"
+    device_class: current
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_discharge_current_limit}"
+    address: 11031
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "A"
+    device_class: current
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    filters:
+      - multiply: 0.1
+      - lambda: return abs(x);
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_cell_voltage_max}"
+    id: renac_cell_max
+    address: 11032
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "mV"
+    device_class: voltage
+    state_class: measurement
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_cell_voltage_min}"
+    id: renac_cell_min
+    address: 11033
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "mV"
+    device_class: voltage
+    state_class: measurement
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_cell_number_max}"
+    address: 11034
+    register_type: holding
+    value_type: S_WORD
+    state_class: measurement
+    entity_category: diagnostic
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_cell_number_min}"
+    address: 11035
+    register_type: holding
+    value_type: S_WORD
+    state_class: measurement
+    entity_category: diagnostic
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_cell_temperature_max}"
+    address: 11036
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_cell_temperature_min}"
+    address: 11037
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "°C"
+    device_class: temperature
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+# ---------------------------------------------------------------------------
+# Battery cycle count and capacity (11041, 11056)
+# ---------------------------------------------------------------------------
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_battery_cycles}"
+    address: 11041
+    register_type: holding
+    force_new_range: true
+    value_type: S_WORD
+    state_class: total_increasing
+    entity_category: diagnostic
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_battery_capacity}"
+    address: 11056
+    register_type: holding
+    force_new_range: true
+    value_type: S_WORD
+    unit_of_measurement: "Ah"
+    state_class: measurement
+    entity_category: diagnostic
+
+# ---------------------------------------------------------------------------
+# Grid voltages (11076-11078)
+# ---------------------------------------------------------------------------
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_grid_voltage_r}"
+    address: 11076
+    register_type: holding
+    force_new_range: true
+    value_type: S_WORD
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_grid_voltage_s}"
+    address: 11077
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_grid_voltage_t}"
+    address: 11078
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+# ---------------------------------------------------------------------------
+# Inverter currents (11079-11081)
+# ---------------------------------------------------------------------------
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_inverter_current_r}"
+    address: 11079
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "A"
+    device_class: current
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_inverter_current_s}"
+    address: 11080
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "A"
+    device_class: current
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_inverter_current_t}"
+    address: 11081
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "A"
+    device_class: current
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+# ---------------------------------------------------------------------------
+# Inverter AC power (11082-11084)
+# negative = importing from grid, positive = exporting
+# ---------------------------------------------------------------------------
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_inverter_power_r}"
+    id: renac_inverter_r
+    address: 11082
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_inverter_power_s}"
+    id: renac_inverter_s
+    address: 11083
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_inverter_power_t}"
+    id: renac_inverter_t
+    address: 11084
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+
+# ---------------------------------------------------------------------------
+# Grid frequency (11085-11087)
+# ---------------------------------------------------------------------------
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_grid_frequency_r}"
+    address: 11085
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "Hz"
+    device_class: frequency
+    state_class: measurement
+    accuracy_decimals: 2
+    filters: [multiply: 0.01]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_grid_frequency_s}"
+    address: 11086
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "Hz"
+    device_class: frequency
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    filters: [multiply: 0.01]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_grid_frequency_t}"
+    address: 11087
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "Hz"
+    device_class: frequency
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    filters: [multiply: 0.01]
+
+# ---------------------------------------------------------------------------
+# EPS / backup output (11088-11097)
+# All zero while the grid is present.
+# ---------------------------------------------------------------------------
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_eps_voltage_r}"
+    address: 11088
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_eps_voltage_s}"
+    address: 11089
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_eps_voltage_t}"
+    address: 11090
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "V"
+    device_class: voltage
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_eps_current_r}"
+    address: 11091
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "A"
+    device_class: current
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_eps_current_s}"
+    address: 11092
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "A"
+    device_class: current
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_eps_current_t}"
+    address: 11093
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "A"
+    device_class: current
+    state_class: measurement
+    accuracy_decimals: 1
+    filters: [multiply: 0.1]
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_eps_power_r}"
+    id: renac_eps_r
+    address: 11094
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_eps_power_s}"
+    id: renac_eps_s
+    address: 11095
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_eps_power_t}"
+    id: renac_eps_t
+    address: 11096
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_eps_frequency}"
+    address: 11097
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "Hz"
+    device_class: frequency
+    state_class: measurement
+    accuracy_decimals: 2
+    filters: [multiply: 0.01]
+
+# ---------------------------------------------------------------------------
+# Grid meter (11098-11101)
+# positive = importing from grid, negative = exporting
+# ---------------------------------------------------------------------------
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_meter_power_r}"
+    address: 11098
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_meter_power_s}"
+    address: 11099
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_meter_power_t}"
+    address: 11100
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_meter_power_total}"
+    id: renac_meter_total
+    address: 11101
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+
+# ---------------------------------------------------------------------------
+# Secondary meters (11102-11109)
+# Zero unless additional meters are installed. Comment out if unused.
+# ---------------------------------------------------------------------------
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_meter2_power_total}"
+    address: 11105
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    entity_category: diagnostic
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_meter3_power_total}"
+    address: 11109
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    entity_category: diagnostic
+
+# ---------------------------------------------------------------------------
+# Load (11110-11113)
+# On AC-coupled retrofits this reflects flow through the inverter's CT,
+# not true house consumption. Verify against your own metering.
+# ---------------------------------------------------------------------------
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_load_power_r}"
+    address: 11110
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_load_power_s}"
+    address: 11111
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_load_power_t}"
+    address: 11112
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_load_power_total}"
+    address: 11113
+    register_type: holding
+    value_type: S_WORD
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+
+# ---------------------------------------------------------------------------
+# Derived values (computed on the ESP, not read from Modbus)
+# ---------------------------------------------------------------------------
+
+  # Total AC power across all three phases.
+  - platform: template
+    name: "${renac_name} ${e_inverter_power_total}"
+    id: renac_inverter_total
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    lambda: |-
+      if (isnan(id(renac_inverter_r).state) || isnan(id(renac_inverter_s).state)
+          || isnan(id(renac_inverter_t).state)) return NAN;
+      return id(renac_inverter_r).state + id(renac_inverter_s).state
+           + id(renac_inverter_t).state;
+    update_interval: ${renac_update_interval}
+
+  # Split charge/discharge into separate always-positive sensors.
+  # Home Assistant's Energy dashboard needs these as two distinct sources.
+  - platform: template
+    name: "${renac_name} ${e_battery_charge_power}"
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    lambda: |-
+      if (isnan(id(renac_battery_power).state)) return NAN;
+      return id(renac_battery_power).state > 0 ? id(renac_battery_power).state : 0;
+    update_interval: ${renac_update_interval}
+
+  - platform: template
+    name: "${renac_name} ${e_battery_discharge_power}"
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    lambda: |-
+      if (isnan(id(renac_battery_power).state)) return NAN;
+      return id(renac_battery_power).state < 0 ? -id(renac_battery_power).state : 0;
+    update_interval: ${renac_update_interval}
+
+  # Same split for the grid meter.
+  - platform: template
+    name: "${renac_name} ${e_grid_import_power}"
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    lambda: |-
+      if (isnan(id(renac_meter_total).state)) return NAN;
+      return id(renac_meter_total).state > 0 ? id(renac_meter_total).state : 0;
+    update_interval: ${renac_update_interval}
+
+  - platform: template
+    name: "${renac_name} ${e_grid_export_power}"
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    lambda: |-
+      if (isnan(id(renac_meter_total).state)) return NAN;
+      return id(renac_meter_total).state < 0 ? -id(renac_meter_total).state : 0;
+    update_interval: ${renac_update_interval}
+
+  # Cell voltage spread — a good early warning of pack imbalance.
+  # Healthy packs sit under ~50 mV; a rising trend means a cell is drifting.
+  - platform: template
+    name: "${renac_name} ${e_cell_voltage_delta}"
+    unit_of_measurement: "mV"
+    device_class: voltage
+    state_class: measurement
+    entity_category: diagnostic
+    lambda: |-
+      if (isnan(id(renac_cell_max).state) || isnan(id(renac_cell_min).state))
+        return NAN;
+      return id(renac_cell_max).state - id(renac_cell_min).state;
+    update_interval: ${renac_update_interval}
+
+  # Conversion losses: AC drawn minus DC stored. Typically 5-15%.
+  # A sustained rise can indicate a developing fault.
+  - platform: template
+    name: "${renac_name} ${e_conversion_loss}"
+    unit_of_measurement: "W"
+    device_class: power
+    state_class: measurement
+    entity_category: diagnostic
+    lambda: |-
+      if (isnan(id(renac_inverter_total).state)
+          || isnan(id(renac_battery_power).state)) return NAN;
+      return -id(renac_inverter_total).state - id(renac_battery_power).state;
+    update_interval: ${renac_update_interval}
+
+# ---------------------------------------------------------------------------
+# Status registers
+# Values seen in normal operation: inverter 0x0002, BMS 0x0001,
+# meter 0x0001, battery 0x0101, alarm 0x0000.
+# Full bit meanings are not yet documented — contributions welcome.
+# ---------------------------------------------------------------------------
+text_sensor:
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_battery_status}"
+    address: 11040
+    register_type: holding
+    force_new_range: true
+    raw_encode: HEXBYTES
+    register_count: 1
+    response_size: 2
+    entity_category: diagnostic
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_inverter_state}"
+    address: 11057
+    register_type: holding
+    force_new_range: true
+    raw_encode: HEXBYTES
+    register_count: 1
+    response_size: 2
+    entity_category: diagnostic
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_bms_state}"
+    address: 11058
+    register_type: holding
+    raw_encode: HEXBYTES
+    register_count: 1
+    response_size: 2
+    entity_category: diagnostic
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_meter_state}"
+    address: 11059
+    register_type: holding
+    raw_encode: HEXBYTES
+    register_count: 1
+    response_size: 2
+    entity_category: diagnostic
+
+  - platform: modbus_controller
+    modbus_controller_id: renac
+    name: "${renac_name} ${e_alarm}"
+    address: 11060
+    register_type: holding
+    raw_encode: HEXBYTES
+    register_count: 1
+    response_size: 2
+    entity_category: diagnostic
