@@ -41,20 +41,6 @@
 # ============================================================================
 
 substitutions:
-#       renac_name: "Renac"
-#       renac_address: "1"
-#       renac_update_interval: "15s"
-#       renac_flow_control_pin: "4"
-#       renac_tx_pin: "TX"
-#       renac_rx_pin: "RX"
-#
-#     packages:
-#       renac: !include renac-hybrid.yaml
-#
-# LICENCE: public domain / CC0 — do what you like with it.
-# ============================================================================
-
-substitutions:
   renac_name: "Renac"
   renac_address: "1"
   renac_update_interval: "15s"
